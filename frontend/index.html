@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ML Model Predictor</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --card: rgba(255, 255, 255, 0.92);
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: rgba(15, 23, 42, 0.10);
+      --primary: #2563eb;
+      --primary-2: #1d4ed8;
+      --danger: #b91c1c;
+      --success: #047857;
+      --shadow: 0 16px 45px rgba(2, 6, 23, 0.26);
+    }
+
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 600px at 15% 10%, rgba(37, 99, 235, 0.35), transparent 60%),
+        radial-gradient(900px 500px at 90% 20%, rgba(16, 185, 129, 0.25), transparent 55%),
+        radial-gradient(900px 500px at 30% 95%, rgba(168, 85, 247, 0.20), transparent 50%),
+        var(--bg);
+      min-height: 100vh;
+    }
+
+    .container { max-width: 1060px; margin: 0 auto; padding: 32px 16px 60px; }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    h1 { margin: 0; font-size: 26px; letter-spacing: -0.02em; color: white; }
+    .subtitle { margin: 6px 0 0; color: rgba(255,255,255,0.75); font-size: 13px; }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.84);
+      border-radius: 999px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .row { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0; }
+
+    .model-btn {
+      padding: 10px 12px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.88);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform .06s ease, background .2s ease, border-color .2s ease;
+    }
+    .model-btn:hover { transform: translateY(-1px); background: rgba(255,255,255,0.12); }
+    .model-btn.active { background: rgba(37,99,235,0.35); border-color: rgba(147,197,253,0.45); }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .card h3 { margin: 0; font-size: 16px; }
+    .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .field {
+      border: 1px solid rgba(15,23,42,0.10);
+      border-radius: 14px;
+      padding: 12px;
+      background: rgba(255,255,255,0.7);
+    }
+
+    .field-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+
+    label { display: block; font-size: 12px; color: #334155; font-weight: 600; }
+
+    .range {
+      font-size: 11px;
+      color: #0f172a;
+      background: rgba(37,99,235,0.10);
+      border: 1px solid rgba(37,99,235,0.18);
+      padding: 4px 8px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    input {
+      width: 100%;
+      padding: 11px 12px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      border-radius: 12px;
+      outline: none;
+      background: white;
+      font-size: 14px;
+    }
+    input:focus { border-color: rgba(37,99,235,0.7); box-shadow: 0 0 0 4px rgba(37,99,235,0.15); }
+    input.invalid { border-color: rgba(185, 28, 28, 0.65); box-shadow: 0 0 0 4px rgba(185,28,28,0.12); }
+
+    .field-meta { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; }
+    .meta { font-size: 12px; color: var(--muted); }
+    .error { font-size: 12px; color: var(--danger); }
+
+    .actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+
+    .primary {
+      padding: 11px 14px;
+      border: 1px solid rgba(37,99,235,0.25);
+      background: linear-gradient(180deg, rgba(37,99,235,1), rgba(29,78,216,1));
+      color: white;
+      border-radius: 14px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .primary:disabled { opacity: 0.7; cursor: not-allowed; }
+
+    .secondary {
+      padding: 11px 14px;
+      border: 1px solid rgba(15,23,42,0.14);
+      background: rgba(255,255,255,0.75);
+      color: #0f172a;
+      border-radius: 14px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    #result {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(15,23,42,0.10);
+      background: rgba(15,23,42,0.03);
+      font-weight: 700;
+    }
+
+    #result.ok { border-color: rgba(4, 120, 87, 0.25); background: rgba(4,120,87,0.06); color: #064e3b; }
+    #result.bad { border-color: rgba(185, 28, 28, 0.25); background: rgba(185,28,28,0.06); color: #7f1d1d; }
+
+    #status { color: rgba(255,255,255,0.8); font-size: 12px; margin-top: 6px; }
+    .small { font-size: 12px; color: var(--muted); }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>ML Model Predictor</h1>
+        <div class="subtitle">Select a model, fill the fields, and predict. Input fields + expected ranges come from the backend.</div>
+        <div id="status">Loading models…</div>
+      </div>
+      <div class="pill">
+        API: <span id="apiBaseText">http://127.0.0.1:8000</span>
+      </div>
+    </header>
+
+    <div class="row">
+      <button class="model-btn" id="btn-knn" onclick="setModel('knn')">KNN (Iris)</button>
+      <button class="model-btn" id="btn-logistic" onclick="setModel('logistic')">Logistic (Breast Cancer)</button>
+      <button class="model-btn" id="btn-svm" onclick="setModel('svm')">SVM (Wine)</button>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h3 id="formTitle">Inputs</h3>
+          <div class="hint" id="formHint">Choose a model to see the required features and their expected ranges.</div>
+        </div>
+        <div class="pill" id="modelPill" style="display:none;"></div>
+      </div>
+
+      <div id="form" class="grid"></div>
+
+      <div class="actions">
+        <div class="small" id="validationSummary"></div>
+        <div class="row" style="margin: 0;">
+          <button class="secondary" onclick="fillExamples()">Fill examples</button>
+          <button class="primary" id="predictBtn" onclick="predict()">Predict</button>
+        </div>
+      </div>
+
+      <div id="result" style="display:none;"></div>
+    </div>
+  </div>
+
+<script>
+  const API_BASE = "http://127.0.0.1:8000";
+  document.getElementById("apiBaseText").innerText = API_BASE;
+
+  let modelKey = "knn";
+  let modelSpecs = null;
+
+  function fmtRange(field) {
+    const hasMin = typeof field.min === "number";
+    const hasMax = typeof field.max === "number";
+    if (hasMin && hasMax) return `${field.min} – ${field.max}`;
+    if (hasMin) return `≥ ${field.min}`;
+    if (hasMax) return `≤ ${field.max}`;
+    return "";
+  }
+
+  function clearResult() {
+    const el = document.getElementById("result");
+    el.style.display = "none";
+    el.classList.remove("ok", "bad");
+    el.innerText = "";
+  }
+
+  function setActiveButton() {
+    for (const k of ["knn", "logistic", "svm"]) {
+      const btn = document.getElementById(`btn-${k}`);
+      if (!btn) continue;
+      btn.classList.toggle("active", k === modelKey);
+    }
+  }
+
+  function validateField(field, value) {
+    if (Number.isNaN(value)) return `Enter a number`;
+    if (typeof field.min === "number" && value < field.min) return `Expected ≥ ${field.min}`;
+    if (typeof field.max === "number" && value > field.max) return `Expected ≤ ${field.max}`;
+    return "";
+  }
+
+  function updateValidationSummary() {
+    const spec = modelSpecs?.[modelKey];
+    const summary = document.getElementById("validationSummary");
+    if (!spec) { summary.innerText = ""; return; }
+
+    let invalid = 0;
+    for (const field of spec.fields) {
+      const el = document.getElementById(`f-${field.key}`);
+      if (!el) continue;
+      const v = parseFloat(el.value);
+      const msg = validateField(field, v);
+      if (msg) invalid++;
+    }
+
+    summary.innerText = invalid === 0
+      ? "All fields look valid."
+      : `${invalid} field(s) need attention (check ranges).`;
+  }
+
+  function renderForm() {
+    const spec = modelSpecs?.[modelKey];
+    const form = document.getElementById("form");
+    const title = document.getElementById("formTitle");
+    const hint = document.getElementById("formHint");
+    const pill = document.getElementById("modelPill");
+
+    form.innerHTML = "";
+    clearResult();
+
+    if (!spec) {
+      title.innerText = "Inputs";
+      hint.innerText = "Model spec not loaded.";
+      pill.style.display = "none";
+      return;
+    }
+
+    title.innerText = `Inputs for: ${spec.title}`;
+    hint.innerText = `Expected ranges are approximate and based on training datasets. Try “Fill examples” to quickly test.`;
+
+    pill.style.display = "inline-flex";
+    pill.innerText = `POST ${spec.endpoint}`;
+
+    for (const field of spec.fields) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "field";
+
+      const top = document.createElement("div");
+      top.className = "field-top";
+
+      const label = document.createElement("label");
+      label.setAttribute("for", `f-${field.key}`);
+      label.innerText = field.label;
+
+      const range = document.createElement("div");
+      range.className = "range";
+      const r = fmtRange(field);
+      range.innerText = r ? `Range: ${r}` : "Range: n/a";
+
+      top.appendChild(label);
+      top.appendChild(range);
+
+      const input = document.createElement("input");
+      input.id = `f-${field.key}`;
+      input.placeholder = typeof field.example === "number" ? `e.g. ${field.example}` : field.label;
+      input.inputMode = "decimal";
+      input.autocomplete = "off";
+
+      if (typeof field.min === "number") input.min = String(field.min);
+      if (typeof field.max === "number") input.max = String(field.max);
+      input.step = "any";
+
+      const metaRow = document.createElement("div");
+      metaRow.className = "field-meta";
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      meta.innerText = typeof field.example === "number" ? `Example: ${field.example}` : "";
+
+      const err = document.createElement("div");
+      err.className = "error";
+      err.id = `e-${field.key}`;
+      err.innerText = "";
+
+      metaRow.appendChild(meta);
+      metaRow.appendChild(err);
+
+      input.addEventListener("input", () => {
+        const v = parseFloat(input.value);
+        const msg = validateField(field, v);
+        err.innerText = msg;
+        input.classList.toggle("invalid", Boolean(msg));
+        updateValidationSummary();
+      });
+
+      wrapper.appendChild(top);
+      wrapper.appendChild(input);
+      wrapper.appendChild(metaRow);
+      form.appendChild(wrapper);
+    }
+
+    updateValidationSummary();
+  }
+
+  async function loadModels() {
+    const status = document.getElementById("status");
+    try {
+      const res = await fetch(`${API_BASE}/models`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      modelSpecs = await res.json();
+      status.innerText = "";
+      setActiveButton();
+      renderForm();
+    } catch (e) {
+      status.innerText = `Failed to load model definitions from backend: ${e}`;
+    }
+  }
+
+  function setModel(k) {
+    modelKey = k;
+    setActiveButton();
+    renderForm();
+  }
+
+  function fillExamples() {
+    const spec = modelSpecs?.[modelKey];
+    if (!spec) return;
+
+    for (const field of spec.fields) {
+      const el = document.getElementById(`f-${field.key}`);
+      if (!el) continue;
+      if (typeof field.example === "number") {
+        el.value = field.example;
+        el.dispatchEvent(new Event("input"));
+      }
+    }
+  }
+
+  function collectData() {
+    const spec = modelSpecs?.[modelKey];
+    if (!spec) throw new Error("Model spec not loaded");
+
+    const data = {};
+    let invalidCount = 0;
+
+    for (const field of spec.fields) {
+      const el = document.getElementById(`f-${field.key}`);
+      const errEl = document.getElementById(`e-${field.key}`);
+
+      const v = parseFloat(el.value);
+      const msg = validateField(field, v);
+
+      if (errEl) errEl.innerText = msg;
+      el.classList.toggle("invalid", Boolean(msg));
+
+      if (msg) invalidCount++;
+      data[field.key] = v;
+    }
+
+    updateValidationSummary();
+
+    if (invalidCount > 0) {
+      throw new Error(`Fix ${invalidCount} field(s) before predicting.`);
+    }
+
+    return data;
+  }
+
+  async function predict() {
+    const spec = modelSpecs?.[modelKey];
+    const out = document.getElementById("result");
+    const btn = document.getElementById("predictBtn");
+
+    try {
+      if (!spec) throw new Error("Model spec not loaded");
+      clearResult();
+
+      const data = collectData();
+
+      btn.disabled = true;
+      btn.innerText = "Predicting…";
+
+      const res = await fetch(`${API_BASE}${spec.endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      const payload = await res.json();
+      if (!res.ok) {
+        throw new Error(payload?.detail ?? `HTTP ${res.status}`);
+      }
+
+      out.style.display = "block";
+      out.classList.add("ok");
+      out.innerText = payload.label
+        ? `Prediction: ${payload.prediction} (${payload.label})`
+        : `Prediction: ${payload.prediction}`;
+    } catch (e) {
+      out.style.display = "block";
+      out.classList.remove("ok");
+      out.classList.add("bad");
+      out.innerText = `Error: ${e.message ?? e}`;
+    } finally {
+      btn.disabled = false;
+      btn.innerText = "Predict";
+    }
+  }
+
+  loadModels();
+</script>
+
+</body>
+</html>
