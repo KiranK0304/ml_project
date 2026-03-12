@@ -40,6 +40,8 @@ def _load_model(filename: str):
 knn_model = _load_model("knn_model.pkl")
 logistic_model = _load_model("logistic_model.pkl")
 svm_model = _load_model("svm_model.pkl")
+mlr_model = _load_model("mlr_model.pkl")
+polynomial_model = _load_model("polynomial_model.pkl")
 
 
 # ---------------------------
@@ -103,6 +105,23 @@ class WineInput(BaseModel):
     hue: float
     od280_od315_of_diluted_wines: float
     proline: float
+
+
+class CaliforniaHousingInput(BaseModel):
+    # sklearn.datasets.fetch_california_housing().feature_names (8)
+    medinc: float
+    houseage: float
+    aveRooms: float
+    aveBedrms: float
+    population: float
+    aveOccup: float
+    latitude: float
+    longitude: float
+
+
+class PolynomialInput(BaseModel):
+    # Generic 1D polynomial regression input
+    x: float
 
 
 def prepare_iris(data: IrisInput) -> np.ndarray:
@@ -177,6 +196,27 @@ def prepare_wine(data: WineInput) -> np.ndarray:
     )
 
 
+def prepare_california_housing(data: CaliforniaHousingInput) -> np.ndarray:
+    return np.array(
+        [[
+            data.medinc,
+            data.houseage,
+            data.aveRooms,
+            data.aveBedrms,
+            data.population,
+            data.aveOccup,
+            data.latitude,
+            data.longitude,
+        ]],
+        dtype=float,
+    )
+
+
+def prepare_polynomial(data: PolynomialInput) -> np.ndarray:
+    # Many polynomial examples are trained on a single feature.
+    return np.array([[data.x]], dtype=float)
+
+
 # Model metadata for frontend
 MODEL_SPECS = {
     "knn": {
@@ -246,6 +286,29 @@ MODEL_SPECS = {
             {"key": "proline", "label": "proline", "min": 278.0, "max": 1680.0, "example": 745.0},
         ],
     },
+    "mlr": {
+        "title": "Multiple Linear Regression (California Housing)",
+        "endpoint": "/predict/mlr",
+        "task": "regression",
+        "fields": [
+            {"key": "medinc", "label": "Median income (MedInc)", "min": 0.5, "max": 15.0, "example": 3.87},
+            {"key": "houseage", "label": "House age (HouseAge)", "min": 1.0, "max": 52.0, "example": 28.0},
+            {"key": "aveRooms", "label": "Average rooms (AveRooms)", "min": 0.5, "max": 50.0, "example": 5.43},
+            {"key": "aveBedrms", "label": "Average bedrooms (AveBedrms)", "min": 0.1, "max": 10.0, "example": 1.10},
+            {"key": "population", "label": "Population", "min": 1.0, "max": 40000.0, "example": 1160.0},
+            {"key": "aveOccup", "label": "Average occupancy (AveOccup)", "min": 0.5, "max": 50.0, "example": 2.56},
+            {"key": "latitude", "label": "Latitude", "min": 32.0, "max": 42.0, "example": 34.26},
+            {"key": "longitude", "label": "Longitude", "min": -124.5, "max": -114.0, "example": -118.25},
+        ],
+    },
+    "polynomial": {
+        "title": "Polynomial Regression (1D)",
+        "endpoint": "/predict/polynomial",
+        "task": "regression",
+        "fields": [
+            {"key": "x", "label": "x", "min": -10.0, "max": 10.0, "example": 2.0},
+        ],
+    },
 }
 
 
@@ -258,7 +321,13 @@ def list_models():
 def home():
     return {
         "message": "ML Model API Running",
-        "endpoints": ["/predict/knn", "/predict/logistic", "/predict/svm"],
+        "endpoints": [
+            "/predict/knn",
+            "/predict/logistic",
+            "/predict/svm",
+            "/predict/mlr",
+            "/predict/polynomial",
+        ],
     }
 
 
@@ -289,7 +358,28 @@ def predict_svm(data: WineInput):
     return _predict(svm_model, "SVM", prepare_wine(data))
 
 
+@app.post("/predict/mlr")
+def predict_mlr(data: CaliforniaHousingInput):
+    # Regression: return float
+    try:
+        x = prepare_california_housing(data)
+        pred = float(mlr_model.predict(x)[0])
+        return {"model": "Multiple Linear Regression", "prediction": pred}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Prediction failed for MLR: {e}")
+
+
+@app.post("/predict/polynomial")
+def predict_polynomial(data: PolynomialInput):
+    try:
+        x = prepare_polynomial(data)
+        pred = float(polynomial_model.predict(x)[0])
+        return {"model": "Polynomial Regression", "prediction": pred}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Prediction failed for Polynomial Regression: {e}")
+
+
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8888, reload=True)
