@@ -311,7 +311,7 @@ async function loadModels() {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("apiBaseText").innerText = API_BASE;
+//   document.getElementById("apiBaseText").innerText = API_BASE;
 
   // Wire global handlers for inline HTML attrs
   window.goHome = goHome;
